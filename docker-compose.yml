@@ -1,0 +1,41 @@
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    networks:
+      - dns_net
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+#     - "80:80/tcp"
+      - "443:443/tcp"
+    environment:
+      TZ: 'America/New_York'
+      FTLCONF_webserver_api_password: ''
+      DNSMASQ_LISTENING: "all"
+      FTLCONF_dns_upstreams: 'unbound#53'
+    volumes:
+      - './pihole/etc-pihole/:/etc/pihole/'
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+      - SYS_TIME
+    security_opt:
+      - seccomp:unconfined
+    depends_on:
+      - unbound
+    restart: unless-stopped
+
+  unbound:
+    container_name: unbound
+    image: klutchell/unbound:latest
+    networks:
+      - dns_net
+    volumes:
+      - './unbound/unbound.conf:/etc/unbound/unbound.conf'
+    restart: unless-stopped
+
+networks:
+  dns_net:
+    driver: bridge

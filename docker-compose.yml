@@ -43,6 +43,8 @@ services:
     image: klutchell/unbound:latest
     networks:
       - dns_net
+    cap_add:
+      - NET_ADMIN      
 #    ports:
 #      - "53:53/tcp"
 #      - "53:53/udp"

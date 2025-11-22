@@ -2,7 +2,7 @@
 #
 # INSTRUCTIONS:
 # Create the network with:
-#    docker network create --driver bridge --attachable mybridge
+#    docker network create --driver bridge --attachable dns_net
 #
 services:
   unbound:

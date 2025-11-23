@@ -1,0 +1,76 @@
+# INSTRUCTIONS:
+# Create the network with:
+#    docker network create --driver bridge --attachable monitor_net
+#
+services:
+  # --- Dozzle Agent ---
+  dozzle-agent:
+    image: amir20/dozzle:latest
+    container_name: dozzle_agent
+    command: agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 7007:7007
+    mem_limit: 64m
+    restart: unless-stopped
+    networks:
+      - monitor_net
+
+  # --- cAdvisor ---
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - 8080:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    mem_limit: 64m
+    command:
+      - '-housekeeping_interval=10s'
+      - '-docker_only=true'
+      - '--enable_metrics=cpu,memory,network'
+    restart: unless-stopped
+    networks:
+      - monitor_net
+
+  # --- Sync to Pihole99 ---
+  nebula-sync:
+    image: ghcr.io/lovelaze/nebula-sync:latest
+    container_name: nebula-sync
+    environment:
+      - TZ=${TZ}
+      - PRIMARY=${PRIMARY_PIHOLE}|""
+      - REPLICAS=${REPLICA_PIHOLE}|""
+      - FULL_SYNC=${FULL_SYNC}
+      - RUN_GRAVITY=${RUN_GRAVITY}
+      - SYNC_GRAVITY_AD_LIST=${SYNC_GRAVITY_AD_LIST}
+      - SYNC_GRAVITY_DOMAIN_LIST=${SYNC_GRAVITY_DOMAIN_LIST}
+      - CRON=15 3 * * *
+    mem_limit: 64m
+    restart: unless-stopped
+    networks:
+      - monitor_net
+
+  # --- Watchtower ---
+  watchtower:
+    image: nickfedor/watchtower:latest
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_SCHEDULE=${WATCHTOWER_SCHEDULE}
+      - TZ=${TZ}
+    mem_limit: 32m
+    restart: unless-stopped
+    networks:
+      - monitor_net
+
+networks:
+  monitor_net:
+    driver: bridge
